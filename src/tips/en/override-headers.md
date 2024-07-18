@@ -36,3 +36,22 @@ For example, the JS self-profiling API allows you to run a JavaScript profiler, 
    The resource for which you overrode the headers should now be loaded with the new headers.
 
 ![Edge DevTools Network tool, the initial HTML request is selected, the Response Headers section is visible in the sidebar, showing the Add header button, and the new header.](../../assets/img/override-headers.png)
+
+As an alternative, to test in browsers with no equivalent feature, you can use a reverse proxy such as `mitmdump` from [the mitmproxy project](https://mitmproxy.org/):
+
+```sh
+mitmdump --mode reverse:https://devtoolstips.org \
+  --modify-headers "/~s/Content-Security-Policy/default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://unpkg.com/prismjs@1.20.0/themes/prism-okaidia.css; img-src 'self' https://patrickbrosset.com"
+```
+
+The site will then be available (by default) at `http://localhost:8080`. This will thus change the origin and might impact the site's behavior, particularly for CORS requests, cross-document communication, or Service Workers.
+
+`mitmdump` can even modify the responses' body on-the-fly using regular expressions. The following command for instance will inject `nonce=` attributes to the HTML to test a Strict CSP:
+
+```sh
+mitmdump --mode reverse:https://example.net \
+  --modify-headers "/~s/Content-Security-Policy/default-src 'self'; script 'nonce-foobarbaz'; style-src 'nonce-foobarbaz'" \
+  --modify-body "/~s/<script\\b/<script nonce=foobarbaz" \
+  --modify-body "/~s/<link\\b/<link nonce=foobarbaz" \
+  --modify-body "/~s/<style\\b/<style nonce=foobarbaz"
+```
